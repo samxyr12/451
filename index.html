@@ -61,6 +61,45 @@
   @keyframes noteFloat{0%{transform:translate(0,0) rotate(0deg);opacity:0.9;}
     100%{transform:translate(-24px,-60px) rotate(-25deg);opacity:0;}}
 
+  /* gerbang musik + kejutan foto sebelum masuk halaman */
+  .music-gate{
+    position:fixed;inset:0;z-index:200;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,182,39,0.25) 0%, transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(47,217,194,0.22) 0%, transparent 45%),
+      linear-gradient(165deg, rgba(255,225,236,0.98), rgba(231,224,255,0.98));
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+  .gate-card{
+    background:rgba(255,253,249,0.92);
+    border:2px solid rgba(255,255,255,0.9);
+    border-radius:var(--radius-lg);
+    padding:36px 28px;box-shadow:var(--shadow-soft);
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+    max-width:340px;width:100%;
+    animation:cardPop 0.6s cubic-bezier(.34,1.56,.64,1);
+  }
+  .gate-emoji{font-size:52px;margin-bottom:8px;animation:heroPulse 2.2s ease-in-out infinite;}
+  .photo-frame{
+    position:relative;background:#fff;padding:14px 14px 16px;border-radius:12px;
+    box-shadow:0 18px 34px rgba(109,63,209,0.28);
+    transform:rotate(-3deg);margin:16px 0 6px;max-width:230px;
+    animation:cardPop 0.6s cubic-bezier(.34,1.56,.64,1);
+  }
+  .photo-frame::before{
+    content:'';position:absolute;inset:7px;border:2px dashed #FFD9E8;border-radius:7px;pointer-events:none;
+  }
+  .surprise-photo{
+    display:block;width:100%;max-width:200px;border-radius:6px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.14);
+  }
+  .tape{position:absolute;font-size:26px;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.15));}
+  .tape-l{top:-16px;left:-12px;transform:rotate(-18deg);}
+  .tape-r{top:-18px;right:-14px;transform:rotate(16deg);}
+  .sticker-star{position:absolute;bottom:-12px;right:-10px;font-size:24px;animation:heroPulse 2s ease-in-out infinite;}
+  .photo-caption{font-family:'Caveat',cursive;font-size:21px;color:var(--violet);margin-bottom:16px;}
+
   /* cute floating hearts, layered with balloons */
   .heart{position:absolute;bottom:-80px;font-size:20px;opacity:0.5;animation:heartUp linear infinite;}
   @keyframes heartUp{
@@ -252,8 +291,18 @@
 <canvas id="fireworks-canvas"></canvas>
 <div class="ambient" id="ambient"></div>
 
-<audio id="bgMusic" src="c.mp3" loop autoplay muted preload="auto"></audio>
-<div class="music-note" id="musicNote">🎵</div>
+<audio id="bgMusic" src="c.mp3" loop preload="auto"></audio>
+
+<div class="music-gate" id="musicGate">
+  <div class="gate-card" id="gateStart">
+    <div class="gate-emoji">🎶</div>
+    <h1>Eh, sebelum lanjut...</h1>
+    <p class="sub">Nyalain musiknya dulu yuk, biar makin berasa 💫</p>
+    <button class="btn" id="musicGateBtn" onclick="startMusic()">Nyalain Musik 🎵</button>
+  </div>
+</div>
+
+<div class="music-note" id="musicNote" style="display:none;">🎵</div>
 
 <div class="wrap">
 
@@ -352,6 +401,13 @@
         <div class="mascot-big">🥳</div>
         <h2>Selamat ulang tahun,<br><span class="shine">451</span>!</h2>
         <p class="sub" id="finaleSub">Semoga tahun ini penuh cerita bagus ✨</p>
+        <div class="photo-frame">
+          <div class="tape tape-l">🎀</div>
+          <div class="tape tape-r">✨</div>
+          <img src="d.jpg" alt="Foto kejutan buat 451" class="surprise-photo">
+          <div class="sticker-star">⭐</div>
+        </div>
+        <p class="photo-caption">buat kamu, 451 💗</p>
         <div class="finale-actions">
           <button class="btn" onclick="fireworksBurst()">Nyalain kembang api 🎆</button>
           <button class="btn ghost" onclick="location.reload()">Ulangi dari awal 🔁</button>
@@ -381,21 +437,36 @@ setInterval(spawnNote, 900);
 let musicStarted = false;
 function startMusic(){
   if(musicStarted) return;
-  bgMusic.muted = false;
+  musicStarted = true;
+  document.getElementById('musicGateBtn').disabled = true;
   const p = bgMusic.play();
+  const reveal = ()=>{
+    musicNote.style.display = 'flex';
+    setInterval(spawnNote, 900);
+  };
   if(p !== undefined){
-    p.then(()=>{ musicStarted = true; })
-     .catch(err=>console.warn('gagal play musik:', err));
+    p.then(reveal).catch(err=>{
+      console.warn('gagal play musik:', err);
+      musicNote.style.display = 'flex';
+      musicNote.textContent = '⚠️';
+      musicNote.title = 'Musik gagal diputar otomatis, ketuk layar sekali lagi ya';
+    });
+  } else {
+    reveal();
   }
+  closeGate();
 }
-/* autoplay muted dulu (browser izinkan ini tanpa gesture) */
-bgMusic.play().catch(()=>{});
-/* unmute + play beneran begitu ada sentuhan/klik/tombol pertama di halaman */
-['pointerdown','touchstart','keydown'].forEach(ev=>
-  window.addEventListener(ev, startMusic, {once:true})
-);
+
+function closeGate(){
+  const gate = document.getElementById('musicGate');
+  gate.style.transition = 'opacity 0.5s ease';
+  gate.style.opacity = '0';
+  setTimeout(()=>{ gate.style.display = 'none'; }, 500);
+}
+
 bgMusic.addEventListener('pause', ()=>{ if(musicStarted) bgMusic.play().catch(()=>{}); });
 bgMusic.addEventListener('error', ()=>{
+  musicNote.style.display = 'flex';
   musicNote.textContent = '⚠️';
   musicNote.title = 'c.mp3 gagal dimuat — pastikan file ada satu folder dgn HTML ini';
 });
