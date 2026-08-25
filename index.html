@@ -47,17 +47,15 @@
 
   .wrap{position:relative;z-index:2;width:100%;display:flex;flex-direction:column;align-items:center;}
 
-  /* music toggle */
-  .music-btn{
-    position:fixed;top:16px;right:16px;z-index:80;width:50px;height:50px;border-radius:50%;
-    background:linear-gradient(135deg,var(--pink),var(--violet));border:3px solid #fff;
-    box-shadow:0 10px 22px rgba(139,92,246,0.35);cursor:pointer;
-    display:flex;align-items:center;justify-content:center;font-size:20px;
-    animation:musicPulse 2.2s ease-in-out infinite;
+  /* music note indicator (no button, music always plays) */
+  .music-note{
+    position:fixed;top:16px;right:16px;z-index:80;width:44px;height:44px;border-radius:50%;
+    background:linear-gradient(135deg,var(--pink),var(--violet));
+    box-shadow:0 10px 22px rgba(139,92,246,0.35);pointer-events:none;
+    display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;
+    animation:musicPulse 1.4s ease-in-out infinite;
   }
-  .music-btn.paused{animation:none;opacity:0.6;}
-  .music-btn:active{transform:scale(0.9);}
-  @keyframes musicPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+  @keyframes musicPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
   .note{position:fixed;pointer-events:none;z-index:79;font-size:16px;opacity:0.9;
     animation:noteFloat 1.8s ease-out forwards;}
   @keyframes noteFloat{0%{transform:translate(0,0) rotate(0deg);opacity:0.9;}
@@ -254,8 +252,8 @@
 <canvas id="fireworks-canvas"></canvas>
 <div class="ambient" id="ambient"></div>
 
-<audio id="bgMusic" src="c.mp3" loop preload="auto"></audio>
-<div class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</div>
+<audio id="bgMusic" src="c.mp3" loop autoplay preload="auto"></audio>
+<div class="music-note" id="musicNote">🎵</div>
 
 <div class="wrap">
 
@@ -365,43 +363,27 @@
 </div>
 
 <script>
-/* ---------- musik latar ---------- */
+/* ---------- musik latar: autoplay terus, ulang sendiri, tanpa tombol henti ---------- */
 const bgMusic = document.getElementById('bgMusic');
-const musicBtn = document.getElementById('musicBtn');
-let musicOn = false;
+const musicNote = document.getElementById('musicNote');
+bgMusic.loop = true;
 function spawnNote(){
   const n = document.createElement('div');
   n.className = 'note';
   n.textContent = ['🎵','🎶','💗'][Math.floor(Math.random()*3)];
-  const r = musicBtn.getBoundingClientRect();
+  const r = musicNote.getBoundingClientRect();
   n.style.left = (r.left+14)+'px'; n.style.top = (r.top+10)+'px';
   document.body.appendChild(n);
   setTimeout(()=>n.remove(), 1800);
 }
-let noteTimer;
-function toggleMusic(){
-  if(musicOn){
-    bgMusic.pause();
-    musicBtn.classList.add('paused');
-    clearInterval(noteTimer);
-  } else {
-    bgMusic.play().catch(()=>{});
-    musicBtn.classList.remove('paused');
-    noteTimer = setInterval(spawnNote, 900);
-  }
-  musicOn = !musicOn;
-}
-/* coba nyalakan otomatis begitu ada sentuhan/klik pertama */
-function tryAutoStart(){
-  if(!musicOn){
-    bgMusic.play().then(()=>{
-      musicOn = true;
-      noteTimer = setInterval(spawnNote, 900);
-    }).catch(()=>{});
-  }
-  window.removeEventListener('pointerdown', tryAutoStart);
-}
-window.addEventListener('pointerdown', tryAutoStart, {once:true});
+setInterval(spawnNote, 900);
+function forcePlay(){ bgMusic.play().catch(()=>{}); }
+forcePlay();
+/* browser blokir autoplay tanpa interaksi -> paksa jalan begitu ada sentuhan/klik pertama */
+window.addEventListener('pointerdown', forcePlay, {once:true});
+/* jaga-jaga kalau ke-pause/habis, langsung ulang lagi */
+bgMusic.addEventListener('pause', ()=>{ if(!bgMusic.ended) forcePlay(); });
+bgMusic.addEventListener('ended', forcePlay);
 
 /* ---------- background per stage ---------- */
 const bgSets = [
