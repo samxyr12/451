@@ -252,7 +252,7 @@
 <canvas id="fireworks-canvas"></canvas>
 <div class="ambient" id="ambient"></div>
 
-<audio id="bgMusic" src="c.mp3" loop autoplay preload="auto"></audio>
+<audio id="bgMusic" src="c.mp3" loop autoplay muted preload="auto"></audio>
 <div class="music-note" id="musicNote">🎵</div>
 
 <div class="wrap">
@@ -363,10 +363,10 @@
 </div>
 
 <script>
-/* ---------- musik latar: autoplay terus, ulang sendiri, tanpa tombol henti ---------- */
+/* ---------- musik latar ---------- */
 const bgMusic = document.getElementById('bgMusic');
 const musicNote = document.getElementById('musicNote');
-bgMusic.loop = true;
+bgMusic.volume = 1;
 function spawnNote(){
   const n = document.createElement('div');
   n.className = 'note';
@@ -377,13 +377,28 @@ function spawnNote(){
   setTimeout(()=>n.remove(), 1800);
 }
 setInterval(spawnNote, 900);
-function forcePlay(){ bgMusic.play().catch(()=>{}); }
-forcePlay();
-/* browser blokir autoplay tanpa interaksi -> paksa jalan begitu ada sentuhan/klik pertama */
-window.addEventListener('pointerdown', forcePlay, {once:true});
-/* jaga-jaga kalau ke-pause/habis, langsung ulang lagi */
-bgMusic.addEventListener('pause', ()=>{ if(!bgMusic.ended) forcePlay(); });
-bgMusic.addEventListener('ended', forcePlay);
+
+let musicStarted = false;
+function startMusic(){
+  if(musicStarted) return;
+  bgMusic.muted = false;
+  const p = bgMusic.play();
+  if(p !== undefined){
+    p.then(()=>{ musicStarted = true; })
+     .catch(err=>console.warn('gagal play musik:', err));
+  }
+}
+/* autoplay muted dulu (browser izinkan ini tanpa gesture) */
+bgMusic.play().catch(()=>{});
+/* unmute + play beneran begitu ada sentuhan/klik/tombol pertama di halaman */
+['pointerdown','touchstart','keydown'].forEach(ev=>
+  window.addEventListener(ev, startMusic, {once:true})
+);
+bgMusic.addEventListener('pause', ()=>{ if(musicStarted) bgMusic.play().catch(()=>{}); });
+bgMusic.addEventListener('error', ()=>{
+  musicNote.textContent = '⚠️';
+  musicNote.title = 'c.mp3 gagal dimuat — pastikan file ada satu folder dgn HTML ini';
+});
 
 /* ---------- background per stage ---------- */
 const bgSets = [
